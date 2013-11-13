@@ -1,0 +1,16 @@
+#Materials exported from Google Sketchup
+
+newmtl _Photo_Texture_temp_jpg
+Ka 0.000000 0.000000 0.000000
+Kd 1.000000 1.000000 1.000000
+Tr 1.0
+Ks 0.000000 0.000000 0.000000
+Ns 3.200000
+map_Kd temp.jpg
+
+newmtl Default_Material 
+Ka 0.000000 0.000000 0.000000
+Kd 1.0 1.0 1.0 
+Tr 1.0
+Ks 0.000000 0.000000 0.000000
+Ns 3.2
