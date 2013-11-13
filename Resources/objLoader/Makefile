@@ -1,14 +1,13 @@
 # CS4102 CG Practical 4 [-] Shading and Texture
 
 # https://sites.google.com/site/michaelsafyan/software-engineering/how-to-write-a-makefile
-program_NAME := shadingAndTexture
-program_C_SRCS := $(wildcard src/*.c)
-program_CXX_SRCS := $(wildcard src/*.cpp)
-program_CXX_SRCS += $(wildcard Resources/objLoader/*.cpp)
+program_NAME := objLoaderTest
+program_C_SRCS := $(wildcard *.c)
+program_CXX_SRCS := $(wildcard *.cpp)
 program_C_OBJS := ${program_C_SRCS:.c=.o}
 program_CXX_OBJS := ${program_CXX_SRCS:.cpp=.o}
 program_OBJS := $(program_C_OBJS) $(program_CXX_OBJS)
-program_INCLUDE_DIRS := Resources/objLoader/
+program_INCLUDE_DIRS :=
 program_LIBRARY_DIRS := 
 program_LIBRARIES := 
 

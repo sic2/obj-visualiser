@@ -165,6 +165,7 @@ obj_vector* obj_parse_vector()
 	v->e[0] = atof( strtok(NULL, WHITESPACE));
 	v->e[1] = atof( strtok(NULL, WHITESPACE));
 	v->e[2] = atof( strtok(NULL, WHITESPACE));
+
 	return v;
 }
 

@@ -10,12 +10,27 @@ void printVector(obj_vector *v)
 	printf("%.2f  ", v->e[2] );
 }
 
+void printVectorNoLimit(obj_vector *v)
+{
+	printf("%f,", v->e[0] );
+	printf("%f,", v->e[1] );
+	printf("%f  ", v->e[2] );
+}
+
 int main(int argc, char **argv)
 {
 	objLoader *objData = new objLoader();
-	objData->load("Untitled.obj");
+	objData->load("cube.obj");
 
 	printf("Number of vertices: %i\n", objData->vertexCount);
+	for (int i = 0; i < objData->vertexCount; i++)
+	{
+		obj_vector *v = objData->vertexList[i];
+		printf(" vertex ");
+		printVectorNoLimit(v);
+		printf("\n");
+	}
+
 	printf("Number of vertex normals: %i\n", objData->normalCount);
 	printf("Number of texture coordinates: %i\n", objData->textureCount);
 	printf("\n");
@@ -25,7 +40,7 @@ int main(int argc, char **argv)
 	{
 		obj_face *o = objData->faceList[i];
 		printf(" face ");
-		for(int j=0; j<3; j++)
+		for(int j=0; j<4; j++)
 		{
 			printVector(objData->vertexList[ o->vertex_index[j] ]);
 		}
