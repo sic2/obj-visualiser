@@ -4,10 +4,13 @@
 program_NAME := shadingAndTexture
 program_C_SRCS := $(wildcard src/*.c)
 program_CXX_SRCS := $(wildcard src/*.cpp)
-program_CXX_SRCS += $(wildcard Resources/objLoader/*.cpp)
+# make sure external libraries are built
+OBJ_LOADER_CXX_SRCS += $(wildcard Resources/objLoader/*.cpp)
 program_C_OBJS := ${program_C_SRCS:.c=.o}
 program_CXX_OBJS := ${program_CXX_SRCS:.cpp=.o}
+OBJ_LOADER_CXX_OBJS := ${OBJ_LOADER_CXX_SRCS:.cpp=.o}
 program_OBJS := $(program_C_OBJS) $(program_CXX_OBJS)
+solution_OBJS := $(program_OBJS) $(OBJ_LOADER_CXX_OBJS)
 program_INCLUDE_DIRS := Resources/objLoader/
 program_LIBRARY_DIRS := 
 program_LIBRARIES := 
@@ -34,11 +37,13 @@ all: $(program_NAME)
 release: CXXFLAGS += -O2
 release: $(program_NAME)
 
-$(program_NAME): $(program_OBJS)
-	$(LINK.cc) $(program_OBJS) $(GLFLAGS) -o $(program_NAME)
+$(program_NAME): $(solution_OBJS)
+	$(LINK.cc) $(solution_OBJS) $(GLFLAGS) -o $(program_NAME)
 
 clean:
 	@- $(RM) $(program_NAME)
 	@- $(RM) $(program_OBJS)
 
+# Cleans all object files, even from external libraries
 distclean: clean
+	@- $(RM) $(solution_OBJS)
