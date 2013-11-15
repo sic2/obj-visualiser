@@ -32,6 +32,33 @@ GLfloat zRadians = 0.0f;
 GLfloat xRadians = 0.0f;	
 GLfloat zoom = 7.0f;
 
+GLuint	texture[1];	// FIXME
+// Load external textures.
+bool loadExternalTexture(char* texture_filename)			
+{
+	// Local storage for bmp image data.
+	BitMapFile *image[1];
+	// Load the texture.
+	image[0] = Helper::instance().getBMPData("Data/" + std::string(texture_filename));  // @see http://www.amazingtextures.com/
+
+	// Activate texture index texture[0]. 
+	glBindTexture(GL_TEXTURE_2D, texture[0]); 
+
+	// Set texture parameters for wrapping.
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+	// Set texture parameters for filtering.
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	// Specify an image as the texture to be bound with the currently active texture index.
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image[0]->sizeX, image[0]->sizeY, 0, 
+	            GL_RGB, GL_UNSIGNED_BYTE, image[0]->data);
+
+	printf("Texture %s loaded and set \n", texture_filename);
+	return true;
+}
 
 void display()
 {
@@ -45,7 +72,7 @@ void display()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Activate a texture.
-	// glBindTexture(GL_TEXTURE_2D, texture[0]); // TODO - do not hardcode id 
+	glBindTexture(GL_TEXTURE_2D, texture[0]); // TODO - do not hardcode id 
 
 	// @see http://stackoverflow.com/questions/7735203/setting-separate-material-properties-for-different-objects-in-opengl
 	// @see http://stackoverflow.com/questions/15451209/how-to-export-vertex-normal-vn-in-obj-file-with-blender-using-particle-system
@@ -76,11 +103,14 @@ void display()
 			float mat_specular[] = {mtl->spec[0], mtl->spec[1], mtl->spec[2], 1.0};
 			float mat_diffuse[] = {mtl->diff[0], mtl->diff[1], mtl->diff[2], 1.0};
 			float shininess = mtl->shiny;
-			glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-			glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-			glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+			// glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+			// glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+			// glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+			// glMaterialf(GL_FRONT, GL_SHININESS, shininess);
 
+			// blender tutorial for vt missing: http://www.idevgames.com/forums/thread-5344.html
+			glTexCoord2f(objData->textureList[ j ]->e[0], objData->textureList[ j ]->e[1]);
+			//printf("%f %f \n", objData->textureList[ j ]->e[0], objData->textureList[ j ]->e[1]);
 			glVertex3f(objData->vertexList[ o->vertex_index[j] ]->e[0], 
 				objData->vertexList[ o->vertex_index[j] ]->e[1], 
 				objData->vertexList[ o->vertex_index[j] ]->e[2]);
@@ -116,13 +146,25 @@ void init(void)
 	glLoadIdentity();
 
 	// Turn on OpenGL texturing.
-	//glEnable(GL_TEXTURE_2D);
+	glEnable(GL_TEXTURE_2D);
 	// Specify how texture values combine with current surface color values.
-	//glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); 
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); 
 
 	// PROTOTYPING
-	objData = new objLoader();
-	objData->load("Data/sphere.obj");
+	printf("Loading obj file...\n");
+	objData = new objLoader(); //TODO - pass dir to objLoader
+	objData->load("Data/cube.obj");
+	printf("obj file loaded\n");
+
+	printf("Number of materials: %i\n", objData->materialCount);
+	for(int i=0; i<objData->materialCount; i++)
+	{
+		obj_material *mtl = objData->materialList[i];
+		printf(" texture: %s\n", mtl->texture_filename);
+		loadExternalTexture(mtl->texture_filename);
+		printf("\n");
+	}
+
 }
 
 int main(int argc, char **argv)

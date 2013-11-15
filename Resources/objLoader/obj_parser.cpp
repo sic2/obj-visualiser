@@ -5,6 +5,8 @@
 #include "list.h"
 #include "string_extra.h"
 
+#include <string>
+
 #define WHITESPACE " \t\n\r"
 
 void obj_free_half_list(list *listo)
@@ -169,6 +171,16 @@ obj_vector* obj_parse_vector()
 	return v;
 }
 
+obj_vector* obj_parse_vector2D()
+{
+	obj_vector *v = (obj_vector*)malloc(sizeof(obj_vector));
+	v->e[0] = atof( strtok(NULL, WHITESPACE));
+	v->e[1] = atof( strtok(NULL, WHITESPACE));
+	// v->e[2] = atof( strtok(NULL, WHITESPACE)); // TODO - email bug
+
+	return v;
+}
+
 void obj_parse_camera(obj_growable_scene_data *scene, obj_camera *camera)
 {
 	int indices[3];
@@ -188,7 +200,7 @@ int obj_parse_mtl_file(char *filename, list *material_list)
 	FILE *mtl_file_stream;
 	
 	// open scene
-	mtl_file_stream = fopen( filename, "r");
+	mtl_file_stream = fopen(("Data/" + std::string(filename)).c_str(), "r");
 	if(mtl_file_stream == 0)
 	{
 		fprintf(stderr, "Error reading file: %s\n", filename);
@@ -271,6 +283,7 @@ int obj_parse_mtl_file(char *filename, list *material_list)
 		else if( strequal(current_token, "illum") && material_open)
 		{
 		}
+		// BUG - gets new line, which we do not want
 		// texture map
 		else if( strequal(current_token, "map_Kd") && material_open) // originally map_Ka, modified according to sketcup obj export
 		{
@@ -340,7 +353,7 @@ int obj_parse_obj_file(obj_growable_scene_data *growable_data, char *filename)
 		
 		else if( strequal(current_token, "vt") ) //process vertex texture
 		{
-			list_add_item(&growable_data->vertex_texture_list,  obj_parse_vector(), NULL);
+			list_add_item(&growable_data->vertex_texture_list,  obj_parse_vector2D(), NULL);
 		}
 		
 		else if( strequal(current_token, "f") ) //process face
