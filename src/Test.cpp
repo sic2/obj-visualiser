@@ -33,12 +33,11 @@ GLfloat xRadians = 0.0f;
 GLfloat zoom = 7.0f;
 
 GLuint	texture[1];	// FIXME
-// Load external textures.
+// Load external textures. // FIXME - use SOIL
 bool loadExternalTexture(char* texture_filename)			
 {
 	// Local storage for bmp image data.
 	BitMapFile *image[1];
-	// Load the texture.
 	image[0] = Helper::instance().getBMPData("Data/" + std::string(texture_filename));  // @see http://www.amazingtextures.com/
 
 	// Activate texture index texture[0]. 
@@ -60,6 +59,12 @@ bool loadExternalTexture(char* texture_filename)
 	return true;
 }
 
+// @see http://ogldev.atspace.co.uk/www/tutorial32/tutorial32.html
+/*
+XXX:
+splitting into vertexarray by material
+solution seen in forum
+*/
 void display()
 {
 	glPushMatrix();
@@ -70,57 +75,47 @@ void display()
 
 	// TODO - could set new light position here (see red book #5): glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// Activate a texture.
-	glBindTexture(GL_TEXTURE_2D, texture[0]); // TODO - do not hardcode id 
-
+	
 	// @see http://stackoverflow.com/questions/7735203/setting-separate-material-properties-for-different-objects-in-opengl
 	// @see http://stackoverflow.com/questions/15451209/how-to-export-vertex-normal-vn-in-obj-file-with-blender-using-particle-system
 	for(int i=0; i < objData->faceCount; i++)
 	{
 		obj_face *o = objData->faceList[i];
 
-		// TODO - use switch
-		if (o->vertex_count == 2)
-		{
-			glBegin(GL_LINES);
-		}
-		if (o->vertex_count == 3)
-		{
-			glBegin(GL_TRIANGLES);
-		}
-		else if (o->vertex_count == 4)
-		{
-			glBegin(GL_QUADS);
-		}
+		// NOTE: Assume faces are triangulated
+		glBegin(GL_TRIANGLE_FAN);
 		
-		glNormal3f(objData->normalList[i]->e[0], objData->normalList[i]->e[1], objData->normalList[i]->e[2]); 
-		for(int j=0; j < o->vertex_count && j < 4; j++) // FIXME - assume 4 vertices
+		for(int j=0; j < o->vertex_count; j++)
 		{
-			obj_material *mtl = objData->materialList[o->material_index];
+			// Activate a texture.
+			glBindTexture(GL_TEXTURE_2D, texture[0]); // TODO - do not hardcode id
 
+			glNormal3f(objData->normalList[ o->normal_index[ j ] ]->e[0], 
+				objData->normalList[ o->normal_index[ j ] ]->e[1], 
+				objData->normalList[ o->normal_index[ j ] ]->e[2]); 
+
+			obj_material *mtl = objData->materialList[ o->material_index ];
 			float mat_ambient[] = {mtl->amb[0], mtl->amb[1], mtl->amb[2], 1.0};
 			float mat_specular[] = {mtl->spec[0], mtl->spec[1], mtl->spec[2], 1.0};
 			float mat_diffuse[] = {mtl->diff[0], mtl->diff[1], mtl->diff[2], 1.0};
 			float shininess = mtl->shiny;
-			// glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-			// glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-			// glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-			// glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+			glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+			glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+			glMaterialf(GL_FRONT, GL_SHININESS, shininess);
 
 			// blender tutorial for vt missing: http://www.idevgames.com/forums/thread-5344.html
-			glTexCoord2f(objData->textureList[ j ]->e[0], objData->textureList[ j ]->e[1]);
-			//printf("%f %f \n", objData->textureList[ j ]->e[0], objData->textureList[ j ]->e[1]);
+			if (std::string(mtl->texture_filename).size() > 0)
+				glTexCoord2f(objData->textureList[ o->texture_index[j] ]->e[0], 
+							objData->textureList[ o->texture_index[j] ]->e[1]);
+			
 			glVertex3f(objData->vertexList[ o->vertex_index[j] ]->e[0], 
 				objData->vertexList[ o->vertex_index[j] ]->e[1], 
 				objData->vertexList[ o->vertex_index[j] ]->e[2]);
 		}		
 		glEnd();
 	}
-
 	glPopMatrix();
-
-	// Flush and swap buffers
 	glutSwapBuffers();
 }
 

@@ -5,8 +5,8 @@
 /*
 * Light properties
 */
-GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0};  /* Red diffuse light. */
-GLfloat light_position[] = {1.0, 1.0, 1.0, 0.0};  /* Infinite light location. */
+GLfloat light_position[] = {0.0, 0.0, 1.0, 0.0}; 
+GLfloat light_diffuse[] = {1.0, 1.0, 1.0, 1.0}; 
 GLfloat light_ambient[] = {1.0, 1.0, 1.0, 1.0}; 
 GLfloat light_specular[] = {1.0, 1.0, 1.0, 1.0};
 
