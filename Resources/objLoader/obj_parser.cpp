@@ -48,7 +48,12 @@ void obj_set_material_defaults(obj_material *mtl)
 	mtl->glossy = 98;
 	mtl->shiny = 0;
 	mtl->refract_index = 1;
-	mtl->texture_filename[0] = '\0';
+	mtl->amb_texture_filename[0] = '\0';
+	mtl->diff_texture_filename[0] = '\0';
+	mtl->spec_texture_filename[0] = '\0';
+	mtl->spec_hghlt_cmp_filename[0] = '\0';
+	mtl->alpha_texture_filename[0] = '\0';
+	mtl->map_bump_filename[0] = '\0';
 }
 
 int obj_parse_vertex_index(int *vertex_index, int *texture_index, int *normal_index)
@@ -56,7 +61,6 @@ int obj_parse_vertex_index(int *vertex_index, int *texture_index, int *normal_in
 	char *temp_str;
 	char *token;
 	int vertex_count = 0;
-
 	
 	while( (token = strtok(NULL, WHITESPACE)) != NULL)
 	{
@@ -284,10 +288,30 @@ int obj_parse_mtl_file(char *filename, list *material_list)
 		{
 		}
 		// BUG - gets new line, which we do not want
-		// texture map
-		else if( strequal(current_token, "map_Kd") && material_open) // originally map_Ka, modified according to sketcup obj export
+		// texture maps
+		else if( strequal(current_token, "map_Ka") && material_open)
 		{
-			strncpy(current_mtl->texture_filename, strtok(NULL, " \t"), OBJ_FILENAME_LENGTH);
+			strncpy(current_mtl->amb_texture_filename, strtok(NULL, "\n\t"), OBJ_FILENAME_LENGTH);
+		}
+		else if( strequal(current_token, "map_Kd") && material_open)
+		{
+			strncpy(current_mtl->diff_texture_filename, strtok(NULL, "\n\t"), OBJ_FILENAME_LENGTH);
+		}
+		else if( strequal(current_token, "map_Ks") && material_open)
+		{
+			strncpy(current_mtl->spec_texture_filename, strtok(NULL, "\n\t"), OBJ_FILENAME_LENGTH);
+		}
+		else if( strequal(current_token, "map_Ns") && material_open)
+		{
+			strncpy(current_mtl->spec_hghlt_cmp_filename, strtok(NULL, "\n\t"), OBJ_FILENAME_LENGTH);
+		}
+		else if( strequal(current_token, "map_d") && material_open)
+		{
+			strncpy(current_mtl->alpha_texture_filename, strtok(NULL, "\n\t"), OBJ_FILENAME_LENGTH);
+		}
+		else if( (strequal(current_token, "map_bump") || strequal(current_token, "bump") || strequal(current_token, "map_Bump")) && material_open)
+		{
+			strncpy(current_mtl->map_bump_filename, strtok(NULL, "\n\t"), OBJ_FILENAME_LENGTH);
 		}
 		else
 		{

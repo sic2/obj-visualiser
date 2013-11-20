@@ -2,6 +2,27 @@
 #include "Lights.h"
 #include "objLoader.h"
 
+#include <map>
+#include <string>
+
+/**
+
+NOTES:
+bump: http://www.paulsprojects.net/tutorials/simplebump/simplebump.html
+bump mapping: http://nehe.gamedev.net/article/bump_mapping/25006/
+
+**/
+
+/*
+* Key bindings
+*/
+#define ESC_SIGN 27
+#define PLUS_SIGN 43
+#define MINUS_SIGN 45
+#define C_SIGN 67
+#define c_SIGN 99
+#define SPACE_SIGN 32
+
 /*
 * Perspective view coefficients
 */
@@ -15,55 +36,55 @@ objLoader *objData;
 
 Lights* lights;
 
-void keyboardFunc(unsigned char key, int x, int y)
-{
-	switch(key)
-	{
-	case 27: exit(EXIT_SUCCESS);
-		break;
-	default: printf("key %d unknown \n", key);
-		break;
-	} // end switch
-	glutPostRedisplay();
-}
-
 const GLfloat RADIANS_ACCURACY = 0.5f;
 GLfloat zRadians = 0.0f;
 GLfloat xRadians = 0.0f;	
 GLfloat zoom = 7.0f;
 
-GLuint	texture[1];	// FIXME
+std::map< char*, GLuint > textures;
+
+/*
+* Preprocessors
+*/
+// Callbacks
+void display();
+void myReshape(int w, int h);
+void keyboardFunc(unsigned char key, int x, int y);
+void specialFunc(int key, int x, int y);
+
+// Application defined
+bool loadExternalTexture(char* texture_filename);
+void cleanup();
+void shutDown();
+void init(void);
+
 // Load external textures. // FIXME - use SOIL
 bool loadExternalTexture(char* texture_filename)			
 {
-	// Local storage for bmp image data.
-	BitMapFile *image[1];
-	image[0] = Helper::instance().getBMPData("Data/" + std::string(texture_filename));  // @see http://www.amazingtextures.com/
+	BitMapFile* image = Helper::instance().getBMPData("Data/" + std::string(texture_filename));  // @see http://www.amazingtextures.com/
 
-	// Activate texture index texture[0]. 
-	glBindTexture(GL_TEXTURE_2D, texture[0]); 
+	textures.insert(std::pair<char*, GLuint> (texture_filename, textures.size()));
+	glBindTexture(GL_TEXTURE_2D, textures[texture_filename]);
 
-	// Set texture parameters for wrapping.
+	// Set texture parameters for wrapping and filtering.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	// Set texture parameters for filtering.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	// Specify an image as the texture to be bound with the currently active texture index.
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image[0]->sizeX, image[0]->sizeY, 0, 
-	            GL_RGB, GL_UNSIGNED_BYTE, image[0]->data);
-
-	printf("Texture %s loaded and set \n", texture_filename);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->sizeX, image->sizeY, 0, 
+	            GL_RGB, GL_UNSIGNED_BYTE, image->data);
+	
 	return true;
 }
 
 // @see http://ogldev.atspace.co.uk/www/tutorial32/tutorial32.html
 /*
-XXX:
+TODO:
 splitting into vertexarray by material
 solution seen in forum
+- this need an appropriate method and data structure
 */
 void display()
 {
@@ -73,7 +94,6 @@ void display()
 			0.0, 0.0, 0.0,
 			0.0, 1.0, 0.0);
 
-	// TODO - could set new light position here (see red book #5): glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	// @see http://stackoverflow.com/questions/7735203/setting-separate-material-properties-for-different-objects-in-opengl
@@ -84,16 +104,14 @@ void display()
 
 		// NOTE: Assume faces are triangulated
 		glBegin(GL_TRIANGLE_FAN);
-		
 		for(int j=0; j < o->vertex_count; j++)
 		{
-			// Activate a texture.
-			glBindTexture(GL_TEXTURE_2D, texture[0]); // TODO - do not hardcode id
-
+			// Normals
 			glNormal3f(objData->normalList[ o->normal_index[ j ] ]->e[0], 
 				objData->normalList[ o->normal_index[ j ] ]->e[1], 
 				objData->normalList[ o->normal_index[ j ] ]->e[2]); 
 
+			// Materials
 			obj_material *mtl = objData->materialList[ o->material_index ];
 			float mat_ambient[] = {mtl->amb[0], mtl->amb[1], mtl->amb[2], 1.0};
 			float mat_specular[] = {mtl->spec[0], mtl->spec[1], mtl->spec[2], 1.0};
@@ -104,11 +122,13 @@ void display()
 			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
 			glMaterialf(GL_FRONT, GL_SHININESS, shininess);
 
-			// blender tutorial for vt missing: http://www.idevgames.com/forums/thread-5344.html
-			if (std::string(mtl->texture_filename).size() > 0)
-				glTexCoord2f(objData->textureList[ o->texture_index[j] ]->e[0], 
+			// Textures - // blender tutorial for vt missing: http://www.idevgames.com/forums/thread-5344.html
+			glBindTexture(GL_TEXTURE_2D, textures[mtl->diff_texture_filename]);
+			if (o->texture_index[j] != -1)
+				glTexCoord2f(objData->textureList[ o->texture_index[j] ]->e[0],
 							objData->textureList[ o->texture_index[j] ]->e[1]);
 			
+			// Vertices
 			glVertex3f(objData->vertexList[ o->vertex_index[j] ]->e[0], 
 				objData->vertexList[ o->vertex_index[j] ]->e[1], 
 				objData->vertexList[ o->vertex_index[j] ]->e[2]);
@@ -118,15 +138,6 @@ void display()
 	glPopMatrix();
 	glutSwapBuffers();
 }
-
-/**
-* Ensures that reshaping the windows keep the model in the correct ratio
-*/
-void myReshape(int w, int h)
-{	
-	width = w; height = h;
-}
-
 
 void init(void)
 {
@@ -140,26 +151,86 @@ void init(void)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	// Turn on OpenGL texturing.
 	glEnable(GL_TEXTURE_2D);
-	// Specify how texture values combine with current surface color values.
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); 
 
-	// PROTOTYPING
+	// XXX - PROTOTYPING - loading objects
 	printf("Loading obj file...\n");
 	objData = new objLoader(); //TODO - pass dir to objLoader
-	objData->load("Data/cube.obj");
+	objData->load("Data/globe.obj");
 	printf("obj file loaded\n");
 
 	printf("Number of materials: %i\n", objData->materialCount);
 	for(int i=0; i<objData->materialCount; i++)
 	{
 		obj_material *mtl = objData->materialList[i];
-		printf(" texture: %s\n", mtl->texture_filename);
-		loadExternalTexture(mtl->texture_filename);
+		printf("texture: %s\n", mtl->name);
+		printf("\t amb_text %s \n", mtl->amb_texture_filename);
+		printf("\t diff_text %s \n", mtl->diff_texture_filename);
+		printf("\t spec_text %s \n", mtl->spec_texture_filename);
+		printf("\t spec_hglt_cmp %s \n", mtl->spec_hghlt_cmp_filename);
+		printf("\t alpha_text %s \n", mtl->alpha_texture_filename);
+		printf("\t bump_text %s \n", mtl->map_bump_filename);
+
+		loadExternalTexture(mtl->diff_texture_filename);
 		printf("\n");
 	}
+}
 
+/**
+* Ensures that reshaping the windows keep the model in the correct ratio
+*/
+void myReshape(int w, int h)
+{	
+	width = w; height = h;
+}
+
+void keyboardFunc(unsigned char key, int x, int y)
+{
+	switch(key)
+	{
+	case ESC_SIGN: shutDown();
+		break;
+	default: printf("key %d unknown \n", key);
+		break;
+	} // end switch
+	glutPostRedisplay();
+}
+
+void specialFunc(int key, int x, int y)
+{
+	switch(key)
+	{
+	case GLUT_KEY_LEFT: zRadians -= RADIANS_ACCURACY;
+		break;
+	case GLUT_KEY_RIGHT: zRadians += RADIANS_ACCURACY; 
+		break;
+	case GLUT_KEY_UP: xRadians -= RADIANS_ACCURACY;
+		break;
+	case GLUT_KEY_DOWN: xRadians += RADIANS_ACCURACY;
+		break;
+	default: printf("Unused special key %d pressed\n", key);
+		break;
+	}
+	glutPostRedisplay();
+}
+
+/**
+* Delete any allocated resources
+*/
+void cleanup()
+{
+	delete lights;
+}
+
+/**
+* Shuts down the application.
+* This involves a call to #cleanup() as well.
+*/
+void shutDown()
+{
+	cleanup();
+	exit(EXIT_SUCCESS);
 }
 
 int main(int argc, char **argv)
@@ -167,7 +238,7 @@ int main(int argc, char **argv)
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
 	glutInitWindowSize(width, height);
-	glutCreateWindow("Test");
+	glutCreateWindow("Shading and Textures");
 
 	// Registering callbacks
 	glutReshapeFunc(myReshape);

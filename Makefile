@@ -12,8 +12,8 @@ OBJ_LOADER_CXX_OBJS := ${OBJ_LOADER_CXX_SRCS:.cpp=.o}
 program_OBJS := $(program_C_OBJS) $(program_CXX_OBJS)
 solution_OBJS := $(program_OBJS) $(OBJ_LOADER_CXX_OBJS)
 program_INCLUDE_DIRS := Resources/objLoader/
-program_LIBRARY_DIRS := 
-program_LIBRARIES := 
+program_LIBRARY_DIRS :=
+program_LIBRARIES :=
 
 CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir))
 LDFLAGS += $(foreach librarydir,$(program_LIBRARY_DIRS),-L$(librarydir))
@@ -24,7 +24,7 @@ UNAME := $(shell uname)
 
 # GL Flags
 ifeq ($(UNAME), Darwin)
-	GLFLAGS = -framework OpenGL -framework GLUT	
+	GLFLAGS = -framework OpenGL -framework GLUT        
 endif
 ifeq ($(UNAME), Linux)
 	GLFLAGS = -lGL -lGLU -lglut
@@ -32,7 +32,7 @@ endif
 
 .PHONY: all clean distclean
 
-all: $(program_NAME) 
+all: $(program_NAME)
 
 release: CXXFLAGS += -O2
 release: $(program_NAME)
