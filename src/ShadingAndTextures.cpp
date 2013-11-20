@@ -1,8 +1,9 @@
 #include "Helper.h"
 #include "Lights.h"
 #include "objLoader.h"
-#include "math.h"
 
+#include <math.h>
+#include <stdio.h>
 #include <map>
 #include <string>
 
@@ -27,9 +28,9 @@ bump mapping: http://nehe.gamedev.net/article/bump_mapping/25006/
 /*
 * Perspective view coefficients
 */
-#define PERSPECTIVE_ANGLE_VIEW 40.0
+#define PERSPECTIVE_ANGLE_VIEW 60.0
 #define PERSPECTIVE_NEAR 1.0
-#define PERSPECTIVE_FAR 10.0
+#define PERSPECTIVE_FAR 40.0
 
 // Window dimensions
 int width = 500; int height = 500;
@@ -37,9 +38,10 @@ objLoader *objData;
 
 Lights* lights;
 
-const GLfloat RADIANS_ACCURACY = 0.1f;
-GLfloat zRadians = 0.0f;
-GLfloat xRadians = 0.0f;	
+const float ZOOM_FACTOR = 0.1;
+const GLfloat DEGREES_ACCURACY = 5.0f;
+GLfloat theta = 90.0f;
+GLfloat phi = 0.0f;	
 GLfloat zoom = 7.0f;
 
 std::map< char*, GLuint > textures;
@@ -52,6 +54,7 @@ void display();
 void myReshape(int w, int h);
 void keyboardFunc(unsigned char key, int x, int y);
 void specialFunc(int key, int x, int y);
+void menu(int);
 
 // Application defined
 bool loadExternalTexture(char* texture_filename);
@@ -90,18 +93,41 @@ solution seen in forum
 void display()
 {
 	glPushMatrix();
-
-	// Calculate the camera position using the distance and angles
-	float camX = zoom * cos(zRadians); 
-	float camY = zoom * sin(xRadians);
-	float camZ = zoom;
+	
+	// @see http://homepages.ius.edu/RWISMAN/b481/html/notes/FlyAround.htm
+	float camX = zoom * sin(theta*0.0174532) * sin(phi*0.0174532);
+  	float camY = zoom * cos(theta*0.0174532);
+   	float camZ = zoom * sin(theta*0.0174532) * cos(phi*0.0174532);
+	// Reduce theta slightly to obtain another point on the same longitude line on the sphere.
+	GLfloat dt=1.0;
+	GLfloat eyeXtemp = zoom * sin(theta*0.0174532-dt) * sin(phi*0.0174532);
+	GLfloat eyeYtemp = zoom * cos(theta*0.0174532-dt);
+	GLfloat eyeZtemp = zoom * sin(theta*0.0174532-dt) * cos(phi*0.0174532);
+	// Connect these two points to obtain the camera's up vector.
+	float upX=eyeXtemp-camX;
+	float upY=eyeYtemp-camY;
+	float upZ=eyeZtemp-camZ;
 	// Set the camera position and lookat point
 	gluLookAt(camX,camY,camZ,   // Camera position
-          0.0, 0.0, 0.0,    // Look at point
-          0.0, 1.0, 0.0);   // Up vector
+		  0.0, 0.0, 0.0,    // Look at point
+		  upX, upY, upZ);   // Up vector
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	
+
+	glDisable(GL_TEXTURE_2D);
+	glBegin(GL_LINES);
+		glColor3f(1.0, 1.0, 1.0);
+		glVertex3f(0.0, 0.0, 0.0);
+		glVertex3f(10.0, 0.0, 0.0);
+
+		glVertex3f(0.0, 0.0, 0.0);
+		glVertex3f(0.0, 10.0, 0.0);
+
+		glVertex3f(0.0, 0.0, 0.0);
+		glVertex3f(0.0, 0.0, 10.0);
+	glEnd();
+	glEnable(GL_TEXTURE_2D);
+
 	// @see http://stackoverflow.com/questions/7735203/setting-separate-material-properties-for-different-objects-in-opengl
 	// @see http://stackoverflow.com/questions/15451209/how-to-export-vertex-normal-vn-in-obj-file-with-blender-using-particle-system
 	for(int i=0; i < objData->faceCount; i++)
@@ -163,7 +189,7 @@ void init(void)
 	// XXX - PROTOTYPING - loading objects
 	printf("Loading obj file...\n");
 	objData = new objLoader(); //TODO - pass dir to objLoader
-	objData->load("Data/cube.obj");
+	objData->load("Data/globe.obj");
 	printf("obj file loaded\n");
 
 	printf("Number of materials: %i\n", objData->materialCount);
@@ -200,25 +226,38 @@ void keyboardFunc(unsigned char key, int x, int y)
 	default: printf("key %d unknown \n", key);
 		break;
 	} // end switch
-	glutPostRedisplay();
 }
 
 void specialFunc(int key, int x, int y)
 {
 	switch(key)
 	{
-	case GLUT_KEY_LEFT: zRadians -= RADIANS_ACCURACY;
+	case GLUT_KEY_LEFT: phi -= DEGREES_ACCURACY;
 		break;
-	case GLUT_KEY_RIGHT: zRadians += RADIANS_ACCURACY; 
+	case GLUT_KEY_RIGHT: phi += DEGREES_ACCURACY; 
 		break;
-	case GLUT_KEY_UP: xRadians -= RADIANS_ACCURACY;
+	case GLUT_KEY_UP: theta -= DEGREES_ACCURACY;
 		break;
-	case GLUT_KEY_DOWN: xRadians += RADIANS_ACCURACY;
+	case GLUT_KEY_DOWN: theta += DEGREES_ACCURACY;
 		break;
 	default: printf("Unused special key %d pressed\n", key);
 		break;
 	}
+	phi = fmod((double)phi, 360.0);
+	theta = fmod((double)theta, 360.0);
 	glutPostRedisplay();
+}
+
+// Mouse scrolling snippet from stackoverflow.com
+// @see http://stackoverflow.com/questions/14378/using-the-mouse-scrollwheel-in-glut
+void mouse(int button, int state, int x, int y)
+{
+        if ((button == 3) || (button == 4)) // Wheel reports as button 3(scroll up) and button 4(scroll down)
+        {
+                if (state == GLUT_UP) return; // Disregard redundant GLUT_UP events
+                (button == 3) ? zoom -= ZOOM_FACTOR : zoom += ZOOM_FACTOR; // FIXME - set limits
+        }
+        glutPostRedisplay();
 }
 
 /**
@@ -251,6 +290,7 @@ int main(int argc, char **argv)
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboardFunc);
 	glutSpecialFunc(specialFunc);
+	glutMouseFunc(mouse);
 
 	// Creates the lights object.
 	// This will allow the application to dynamically set lights in the scene
