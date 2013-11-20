@@ -184,7 +184,8 @@ void init(void)
 	glLoadIdentity();
 
 	glEnable(GL_TEXTURE_2D);
-	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); 
+	// GL_MODULATE allows color and light to be combined with textures.
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); 
 
 	// XXX - PROTOTYPING - loading objects
 	printf("Loading obj file...\n");
