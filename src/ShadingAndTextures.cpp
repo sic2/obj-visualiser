@@ -1,6 +1,7 @@
 #include "Helper.h"
 #include "Lights.h"
 #include "objLoader.h"
+#include "math.h"
 
 #include <map>
 #include <string>
@@ -36,7 +37,7 @@ objLoader *objData;
 
 Lights* lights;
 
-const GLfloat RADIANS_ACCURACY = 0.5f;
+const GLfloat RADIANS_ACCURACY = 0.1f;
 GLfloat zRadians = 0.0f;
 GLfloat xRadians = 0.0f;	
 GLfloat zoom = 7.0f;
@@ -90,9 +91,14 @@ void display()
 {
 	glPushMatrix();
 
-	gluLookAt(zRadians, xRadians, zoom,  
-			0.0, 0.0, 0.0,
-			0.0, 1.0, 0.0);
+	// Calculate the camera position using the distance and angles
+	float camX = zoom * cos(zRadians); 
+	float camY = zoom * sin(xRadians);
+	float camZ = zoom;
+	// Set the camera position and lookat point
+	gluLookAt(camX,camY,camZ,   // Camera position
+          0.0, 0.0, 0.0,    // Look at point
+          0.0, 1.0, 0.0);   // Up vector
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
@@ -157,7 +163,7 @@ void init(void)
 	// XXX - PROTOTYPING - loading objects
 	printf("Loading obj file...\n");
 	objData = new objLoader(); //TODO - pass dir to objLoader
-	objData->load("Data/globe.obj");
+	objData->load("Data/cube.obj");
 	printf("obj file loaded\n");
 
 	printf("Number of materials: %i\n", objData->materialCount);
@@ -244,6 +250,7 @@ int main(int argc, char **argv)
 	glutReshapeFunc(myReshape);
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboardFunc);
+	glutSpecialFunc(specialFunc);
 
 	// Creates the lights object.
 	// This will allow the application to dynamically set lights in the scene
