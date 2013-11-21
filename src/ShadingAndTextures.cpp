@@ -49,7 +49,6 @@ int width = 500; int height = 500;
 objLoader *objData;
 
 Lights* lights;
-bool enableLights;
 bool animateMainLight;
 GLfloat lightAngle = 0.0f;
 
@@ -221,7 +220,7 @@ void keyboardFunc(unsigned char key, int x, int y)
 		break;
 	case SPACE_SIGN: (animateMainLight = !animateMainLight) ? glutIdleFunc(idleFunc) : glutIdleFunc(NULL);
 		break;
-	case L_SIGN: case l_SIGN: enableLights = !enableLights; lights->turnLights(enableLights);
+	case L_SIGN: case l_SIGN: lights->nextLights();
 		break;
 	case T_SIGN: case t_SIGN: enableTextures = !enableTextures;
 		break;
@@ -305,7 +304,6 @@ int main(int argc, char **argv)
 
 	// Creates the lights object.
 	// This will allow the application to dynamically set lights in the scene
-	enableLights = true;
 	animateMainLight = false;
 	lights = new Lights();
 

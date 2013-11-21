@@ -5,12 +5,14 @@
 #include <stdio.h>
 #include <math.h>
 
-#define NUMBER_CAMERA_LOCATIONS 5
+#define NUMBER_CAMERA_LOCATIONS 7
 #define FRONT_VIEW_CAMERA 0
 #define TOP_VIEW_CAMERA 1
 #define RIGHT_SIDE_VIEW_CAMERA 2
 #define LEFT_SIDE_VIEW_CAMERA 3
 #define BACK_VIEW_CAMERA 4
+#define FAR_VIEW_CAMERA 5
+#define NEAR_VIEW_CAMERA 6
 
 #define STD_ZOOM 4
 
@@ -81,6 +83,10 @@ private:
 		case LEFT_SIDE_VIEW_CAMERA: cl.zoom = STD_ZOOM; cl.theta = 90.0; cl.phi = 90.0;
 		break;
 		case BACK_VIEW_CAMERA: cl.zoom = STD_ZOOM; cl.theta = 90.0; cl.phi = 180.0;
+		break;
+		case FAR_VIEW_CAMERA: cl.zoom = 10.0; cl.theta = 90.0; cl.phi = 0.0;
+		break;
+		case NEAR_VIEW_CAMERA: cl.zoom = 2.0; cl.theta = 90.0; cl.phi = 0.0;
 		break;
 		default:
 			printf("Undefined camera picked \n");
