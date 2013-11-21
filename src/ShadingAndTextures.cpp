@@ -1,11 +1,16 @@
 #include "Helper.h"
 #include "Lights.h"
-#include "objLoader.h"
 
 #include <math.h>
 #include <stdio.h>
 #include <map>
 #include <string>
+
+// External
+#include "objLoader.h"
+#include "CImg.h"
+
+using namespace cimg_library;
 
 /**
 
@@ -42,7 +47,7 @@ const float ZOOM_FACTOR = 0.1;
 const GLfloat DEGREES_ACCURACY = 5.0f;
 GLfloat theta = 90.0f;
 GLfloat phi = 0.0f;	
-GLfloat zoom = 7.0f;
+GLfloat zoom = 3.0f;
 
 std::map< char*, GLuint > textures;
 
@@ -65,20 +70,37 @@ void init(void);
 // Load external textures. // FIXME - use SOIL
 bool loadExternalTexture(char* texture_filename)			
 {
-	BitMapFile* image = Helper::instance().getBMPData("Data/" + std::string(texture_filename));  // @see http://www.amazingtextures.com/
+	typedef unsigned char uchar;
+	CImg<uchar> src((std::string("Data/") + std::string(texture_filename)).c_str()); // DEBUG - src.display();
 
-	textures.insert(std::pair<char*, GLuint> (texture_filename, textures.size()));
-	glBindTexture(GL_TEXTURE_2D, textures[texture_filename]);
+	// TODO - refactor and move to helper function
+	// Reorder pixels
+	// @see http://sourceforge.net/p/cimg/discussion/334630/thread/38f46281/
+	CImg<uchar> texture(src,false);
+	uchar* ptrs1 = src.data(0,0,0,0);
+	uchar* ptrs2 = src.data(0,0,0,1);
+	uchar* ptrs3 = src.data(0,0,0,2);
+	uchar* ptrd = texture.data();
+	const unsigned int size = src.width() * src.height() * 3;
+	for (unsigned int off = 0; off < size; off += 3) {
+		ptrd[off] = *ptrs1;
+		ptrd[off + 1] = *ptrs2;
+		ptrd[off + 2] = *ptrs3;
+		ptrs1++; ptrs2++; ptrs3++;
+	}
 
-	// Set texture parameters for wrapping and filtering.
+ 	textures.insert(std::pair<char*, GLuint> (texture_filename, textures.size()));
+ 	glBindTexture(GL_TEXTURE_2D, textures[texture_filename]);
+
+ 	// Set texture parameters for wrapping and filtering.
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
 	// Specify an image as the texture to be bound with the currently active texture index.
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, image->sizeX, image->sizeY, 0, 
-	            GL_RGB, GL_UNSIGNED_BYTE, image->data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture.width(), texture.height(), 0, 
+	            GL_RGB, GL_UNSIGNED_BYTE, ptrd);
 	
 	return true;
 }
@@ -157,8 +179,9 @@ void display()
 			// Textures - // blender tutorial for vt missing: http://www.idevgames.com/forums/thread-5344.html
 			glBindTexture(GL_TEXTURE_2D, textures[mtl->diff_texture_filename]);
 			if (o->texture_index[j] != -1)
+				// Flip along y-direction, to compensate CImg behaviour
 				glTexCoord2f(objData->textureList[ o->texture_index[j] ]->e[0],
-							objData->textureList[ o->texture_index[j] ]->e[1]);
+							1 - objData->textureList[ o->texture_index[j] ]->e[1]);
 			
 			// Vertices
 			glVertex3f(objData->vertexList[ o->vertex_index[j] ]->e[0], 

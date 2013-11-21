@@ -12,13 +12,14 @@ OBJ_LOADER_CXX_OBJS := ${OBJ_LOADER_CXX_SRCS:.cpp=.o}
 program_OBJS := $(program_C_OBJS) $(program_CXX_OBJS)
 solution_OBJS := $(program_OBJS) $(OBJ_LOADER_CXX_OBJS)
 program_INCLUDE_DIRS := Resources/objLoader/
-program_LIBRARY_DIRS :=
-program_LIBRARIES :=
+program_INCLUDE_DIRS += Resources/CImg/
+program_LIBRARY_DIRS := 
+program_LIBRARIES := m
 
 CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir))
 LDFLAGS += $(foreach librarydir,$(program_LIBRARY_DIRS),-L$(librarydir))
 LDFLAGS += $(foreach library,$(program_LIBRARIES),-l$(library))
-CXXFLAGS = -Wall -g
+CXXFLAGS = -Wall -ggdb
 
 UNAME := $(shell uname)
 
@@ -30,6 +31,14 @@ ifeq ($(UNAME), Linux)
 	GLFLAGS = -lGL -lGLU -lglut
 endif
 
+# Flags needed for CImg
+ifeq ($(UNAME), Darwin)
+	CImgFLAGS = -lpthread -I/usr/X11R6/include -L/usr/X11R6/lib -lm -lpthread -lX11        
+endif
+ifeq ($(UNAME), Linux)
+	CImgFLAGS = -L/usr/X11R6/lib -lm -lpthread -lX11
+endif
+
 .PHONY: all clean distclean
 
 all: $(program_NAME)
@@ -38,7 +47,7 @@ release: CXXFLAGS += -O2
 release: $(program_NAME)
 
 $(program_NAME): $(solution_OBJS)
-	$(LINK.cc) $(solution_OBJS) $(GLFLAGS) -o $(program_NAME)
+	$(LINK.cc) $(solution_OBJS) $(GLFLAGS) $(CImgFLAGS) -o $(program_NAME)
 
 clean:
 	@- $(RM) $(program_NAME)
