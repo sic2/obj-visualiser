@@ -1,13 +1,15 @@
 #include "Helper.h"
 
-#include "OpenGLHeaders.h"
-
 // Std header files
 #include <cstring>
 #include <cstdlib>
 #include <sstream>
 #include <iostream>
 #include <fstream>
+
+#include "CImg.h"
+
+using namespace cimg_library;
 
 #define WHITE_COLOR 1.0f
 
@@ -51,49 +53,51 @@ void Helper::displayText(float x, float y, const char *fmt, ...)
 	glPopAttrib();
 }
 
-/*
-* This function is taken from the book:
-* Computer Graphics Through OpenGL: From Theory to Experiments
-* by Sumanta Guha
-*/
-BitMapFile* Helper::getBMPData(std::string filename)
+// Load external textures.
+bool Helper::loadExternalTexture(char* texture_filename, std::map< char*, GLuint > textures)			
 {
-   BitMapFile *bmp = new BitMapFile;
-   unsigned int size, offset, headerSize;
-  
-   // Read input file name.
-   std::ifstream infile(filename.c_str(), std::ios::binary);
- 
-   // Get the starting point of the image data.
-   infile.seekg(10);
-   infile.read((char *) &offset, 4); 
-   
-   // Get the header size of the bitmap.
-   infile.read((char *) &headerSize,4);
+	typedef unsigned char uchar;
+	// FIXME - do not hard code location
+	CImg<uchar> src((std::string("Data/") + std::string(texture_filename)).c_str()); // DEBUG - 
+	//src.display();
 
-   // Get width and height values in the bitmap header.
-   infile.seekg(18);
-   infile.read( (char *) &bmp->sizeX, 4);
-   infile.read( (char *) &bmp->sizeY, 4);
+	// Reorder pixels
+	// @see http://sourceforge.net/p/cimg/discussion/334630/thread/38f46281/
+	CImg<uchar> texture(src,false);
+	uchar* ptrs1 = src.data(0,0,0,0);
+	uchar* ptrs2 = src.data(0,0,0,1);
+	uchar* ptrs3 = src.data(0,0,0,2);
 
-   // Allocate buffer for the image.
-   size = bmp->sizeX * bmp->sizeY * 24;
-   bmp->data = new unsigned char[size];
+	uchar* ptrd = texture.data();
+	printf("spectrum %d \n", texture.spectrum());
+	const unsigned int size = src.width() * src.height() * src.spectrum();
+	for (unsigned int i = 0; i < size; i += src.spectrum()) 
+	{
+		ptrd[i] = *ptrs1; ptrs1++; 
+		if (src.spectrum() > 1)
+		{
+			ptrd[i + 1] = *ptrs2; ptrs2++;
+			ptrd[i + 2] = *ptrs3; ptrs3++;
+		}
+	}
 
-   // Read bitmap data.
-   infile.seekg(offset);
-   infile.read((char *) bmp->data , size);
-   
-   // Reverse color from bgr to rgb.
-   int temp;
-   for (unsigned int i = 0; i < size; i += 3)
-   { 
-      temp = bmp->data[i];
-	  bmp->data[i] = bmp->data[i+2];
-	  bmp->data[i+2] = temp;
-   }
+ 	textures.insert(std::pair<char*, GLuint> (texture_filename, textures.size()));
+ 	glBindTexture(GL_TEXTURE_2D, textures[texture_filename]);
 
-   return bmp;
+ 	// Set texture parameters for wrapping and filtering.
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	// Specify an image as the texture to be bound with the currently active texture index.
+	if (texture.spectrum() == 1) // Black and White
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture.width(), texture.height(), 0, 
+	         GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrd);
+	else
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture.width(), texture.height(), 0, 
+			GL_RGB, GL_UNSIGNED_BYTE, ptrd);
+	return true;
 }
 
 /*

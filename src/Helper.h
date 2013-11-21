@@ -1,7 +1,10 @@
 #pragma once
 
+#include "OpenGLHeaders.h"
+
 #include <string>
 #include <cstdarg>
+#include <map>
 
 // Struct of bitmap file.
 struct BitMapFile
@@ -34,14 +37,13 @@ public:
     */
     void displayText(float x, float y, const char *fmt, ...);
 
-    /*
-    * Routine to read a bitmap file.
-    * Works only for uncompressed bmp files of 24-bit color.
-    *
-    * @param fileName (.bmp) to be loaded
-    * @return bitMapFile {width, height, data*}
+    /**
+    * TODO
+    * @param
+    * @param
+    * @return True if texture could be loaded succesfully
     */
-    BitMapFile* getBMPData(std::string filename);
+    bool loadExternalTexture(char* texture_filename, std::map< char*, GLuint > textures);
         
 protected:
     static Helper sInstance;

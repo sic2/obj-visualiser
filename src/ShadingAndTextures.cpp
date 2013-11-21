@@ -1,16 +1,13 @@
 #include "Helper.h"
 #include "Lights.h"
+#include "Camera.h"
 
-#include <math.h>
 #include <stdio.h>
 #include <map>
 #include <string>
 
-// External
+// External headers
 #include "objLoader.h"
-#include "CImg.h"
-
-using namespace cimg_library;
 
 /**
 
@@ -62,48 +59,9 @@ void specialFunc(int key, int x, int y);
 void menu(int);
 
 // Application defined
-bool loadExternalTexture(char* texture_filename);
 void cleanup();
 void shutDown();
 void init(void);
-
-// Load external textures. // FIXME - use SOIL
-bool loadExternalTexture(char* texture_filename)			
-{
-	typedef unsigned char uchar;
-	CImg<uchar> src((std::string("Data/") + std::string(texture_filename)).c_str()); // DEBUG - src.display();
-
-	// TODO - refactor and move to helper function
-	// Reorder pixels
-	// @see http://sourceforge.net/p/cimg/discussion/334630/thread/38f46281/
-	CImg<uchar> texture(src,false);
-	uchar* ptrs1 = src.data(0,0,0,0);
-	uchar* ptrs2 = src.data(0,0,0,1);
-	uchar* ptrs3 = src.data(0,0,0,2);
-	uchar* ptrd = texture.data();
-	const unsigned int size = src.width() * src.height() * 3;
-	for (unsigned int off = 0; off < size; off += 3) {
-		ptrd[off] = *ptrs1;
-		ptrd[off + 1] = *ptrs2;
-		ptrd[off + 2] = *ptrs3;
-		ptrs1++; ptrs2++; ptrs3++;
-	}
-
- 	textures.insert(std::pair<char*, GLuint> (texture_filename, textures.size()));
- 	glBindTexture(GL_TEXTURE_2D, textures[texture_filename]);
-
- 	// Set texture parameters for wrapping and filtering.
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-	// Specify an image as the texture to be bound with the currently active texture index.
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texture.width(), texture.height(), 0, 
-	            GL_RGB, GL_UNSIGNED_BYTE, ptrd);
-	
-	return true;
-}
 
 // @see http://ogldev.atspace.co.uk/www/tutorial32/tutorial32.html
 /*
@@ -115,27 +73,10 @@ solution seen in forum
 void display()
 {
 	glPushMatrix();
-	
-	// @see http://homepages.ius.edu/RWISMAN/b481/html/notes/FlyAround.htm
-	float camX = zoom * sin(theta*0.0174532) * sin(phi*0.0174532);
-  	float camY = zoom * cos(theta*0.0174532);
-   	float camZ = zoom * sin(theta*0.0174532) * cos(phi*0.0174532);
-	// Reduce theta slightly to obtain another point on the same longitude line on the sphere.
-	GLfloat dt=1.0;
-	GLfloat eyeXtemp = zoom * sin(theta*0.0174532-dt) * sin(phi*0.0174532);
-	GLfloat eyeYtemp = zoom * cos(theta*0.0174532-dt);
-	GLfloat eyeZtemp = zoom * sin(theta*0.0174532-dt) * cos(phi*0.0174532);
-	// Connect these two points to obtain the camera's up vector.
-	float upX=eyeXtemp-camX;
-	float upY=eyeYtemp-camY;
-	float upZ=eyeZtemp-camZ;
-	// Set the camera position and lookat point
-	gluLookAt(camX,camY,camZ,   // Camera position
-		  0.0, 0.0, 0.0,    // Look at point
-		  upX, upY, upZ);   // Up vector
-
+	Camera::moveTo(zoom, theta, phi);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	// X-Y-Z Axes
 	glDisable(GL_TEXTURE_2D);
 	glBegin(GL_LINES);
 		glColor3f(1.0, 1.0, 1.0);
@@ -150,6 +91,7 @@ void display()
 	glEnd();
 	glEnable(GL_TEXTURE_2D);
 
+	//glScalef(0.05, 0.05, 0.05);
 	// @see http://stackoverflow.com/questions/7735203/setting-separate-material-properties-for-different-objects-in-opengl
 	// @see http://stackoverflow.com/questions/15451209/how-to-export-vertex-normal-vn-in-obj-file-with-blender-using-particle-system
 	for(int i=0; i < objData->faceCount; i++)
@@ -213,6 +155,8 @@ void init(void)
 	// XXX - PROTOTYPING - loading objects
 	printf("Loading obj file...\n");
 	objData = new objLoader(); //TODO - pass dir to objLoader
+	// get list of files in directory
+	// @see http://stackoverflow.com/questions/612097/how-can-i-get-a-list-of-files-in-a-directory-using-c-or-c
 	objData->load("Data/globe.obj");
 	printf("obj file loaded\n");
 
@@ -228,7 +172,8 @@ void init(void)
 		printf("\t alpha_text %s \n", mtl->alpha_texture_filename);
 		printf("\t bump_text %s \n", mtl->map_bump_filename);
 
-		loadExternalTexture(mtl->diff_texture_filename);
+		if (std::string(mtl->diff_texture_filename).size() != 0)
+			Helper::instance().loadExternalTexture(mtl->diff_texture_filename, textures);
 		printf("\n");
 	}
 }
@@ -267,8 +212,7 @@ void specialFunc(int key, int x, int y)
 	default: printf("Unused special key %d pressed\n", key);
 		break;
 	}
-	phi = fmod((double)phi, 360.0);
-	theta = fmod((double)theta, 360.0);
+	phi = fmod((double)phi, 360.0); theta = fmod((double)theta, 360.0);
 	glutPostRedisplay();
 }
 
