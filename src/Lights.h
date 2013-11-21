@@ -37,4 +37,24 @@ public:
 		glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
 	}
 
+	inline void reApply(float angle)
+	{
+		glPushMatrix();
+		glRotatef(angle,0,1,0);
+		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+		glPopMatrix();
+	}
+
+	inline void turnLights(bool on)
+	{
+		if (on) 
+		{
+			glEnable(GL_LIGHTING);
+		}
+		else
+		{
+			glDisable(GL_LIGHTING);
+		}
+	}
+
 };

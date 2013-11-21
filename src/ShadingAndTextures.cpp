@@ -23,9 +23,13 @@ bump mapping: http://nehe.gamedev.net/article/bump_mapping/25006/
 #define ESC_SIGN 27
 #define PLUS_SIGN 43
 #define MINUS_SIGN 45
+#define SPACE_SIGN 32
 #define C_SIGN 67
 #define c_SIGN 99
-#define SPACE_SIGN 32
+#define L_SIGN 76
+#define l_SIGN 108
+#define T_SIGN 84
+#define t_SIGN 116
 
 /*
 * Perspective view coefficients
@@ -39,6 +43,7 @@ int width = 500; int height = 500;
 objLoader *objData;
 
 Lights* lights;
+bool enableLights;
 
 const float ZOOM_FACTOR = 0.1;
 const GLfloat DEGREES_ACCURACY = 5.0f;
@@ -46,7 +51,10 @@ GLfloat theta = 90.0f;
 GLfloat phi = 0.0f;	
 GLfloat zoom = 3.0f;
 
+GLfloat lightAngle = 0.0f;
+
 std::map< char*, GLuint > textures;
+bool enableTextures;
 
 /*
 * Preprocessors
@@ -72,6 +80,8 @@ solution seen in forum
 */
 void display()
 {
+	lights->reApply(lightAngle);
+	
 	glPushMatrix();
 	Camera::moveTo(zoom, theta, phi);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -91,7 +101,8 @@ void display()
 	glEnd();
 	glEnable(GL_TEXTURE_2D);
 
-	//glScalef(0.05, 0.05, 0.05);
+	glScalef(0.5, 0.5, 0.5);
+	glTranslatef(0.0, -3.0, 0.0);
 	// @see http://stackoverflow.com/questions/7735203/setting-separate-material-properties-for-different-objects-in-opengl
 	// @see http://stackoverflow.com/questions/15451209/how-to-export-vertex-normal-vn-in-obj-file-with-blender-using-particle-system
 	for(int i=0; i < objData->faceCount; i++)
@@ -104,14 +115,14 @@ void display()
 		{
 			// Normals
 			glNormal3f(objData->normalList[ o->normal_index[ j ] ]->e[0], 
-				objData->normalList[ o->normal_index[ j ] ]->e[1], 
-				objData->normalList[ o->normal_index[ j ] ]->e[2]); 
+					objData->normalList[ o->normal_index[ j ] ]->e[1], 
+					objData->normalList[ o->normal_index[ j ] ]->e[2]); 
 
 			// Materials
 			obj_material *mtl = objData->materialList[ o->material_index ];
-			float mat_ambient[] = {mtl->amb[0], mtl->amb[1], mtl->amb[2], 1.0};
-			float mat_specular[] = {mtl->spec[0], mtl->spec[1], mtl->spec[2], 1.0};
-			float mat_diffuse[] = {mtl->diff[0], mtl->diff[1], mtl->diff[2], 1.0};
+			float mat_ambient[] 	= {mtl->amb[0], mtl->amb[1], mtl->amb[2], 1.0};
+			float mat_specular[] 	= {mtl->spec[0], mtl->spec[1], mtl->spec[2], 1.0};
+			float mat_diffuse[] 	= {mtl->diff[0], mtl->diff[1], mtl->diff[2], 1.0};
 			float shininess = mtl->shiny;
 			glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
 			glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -119,16 +130,23 @@ void display()
 			glMaterialf(GL_FRONT, GL_SHININESS, shininess);
 
 			// Textures - // blender tutorial for vt missing: http://www.idevgames.com/forums/thread-5344.html
-			glBindTexture(GL_TEXTURE_2D, textures[mtl->diff_texture_filename]);
-			if (o->texture_index[j] != -1)
-				// Flip along y-direction, to compensate CImg behaviour
-				glTexCoord2f(objData->textureList[ o->texture_index[j] ]->e[0],
-							1 - objData->textureList[ o->texture_index[j] ]->e[1]);
-			
+			if (enableTextures)
+			{	
+				glEnable(GL_TEXTURE_2D);
+				glBindTexture(GL_TEXTURE_2D, textures[mtl->diff_texture_filename]);
+				if (o->texture_index[j] != -1)
+					// Flip along y-direction, to compensate CImg behaviour
+					glTexCoord2f(objData->textureList[ o->texture_index[j] ]->e[0],
+								 1 - objData->textureList[ o->texture_index[j] ]->e[1]);
+			}
+			else
+			{
+				glDisable(GL_TEXTURE_2D);
+			}
 			// Vertices
 			glVertex3f(objData->vertexList[ o->vertex_index[j] ]->e[0], 
-				objData->vertexList[ o->vertex_index[j] ]->e[1], 
-				objData->vertexList[ o->vertex_index[j] ]->e[2]);
+					objData->vertexList[ o->vertex_index[j] ]->e[1], 
+					objData->vertexList[ o->vertex_index[j] ]->e[2]);
 		}		
 		glEnd();
 	}
@@ -148,6 +166,7 @@ void init(void)
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
+	enableTextures = true;
 	glEnable(GL_TEXTURE_2D);
 	// GL_MODULATE allows color and light to be combined with textures.
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); 
@@ -157,7 +176,7 @@ void init(void)
 	objData = new objLoader(); //TODO - pass dir to objLoader
 	// get list of files in directory
 	// @see http://stackoverflow.com/questions/612097/how-can-i-get-a-list-of-files-in-a-directory-using-c-or-c
-	objData->load("Data/globe.obj");
+	objData->load("Data/myface.obj");
 	printf("obj file loaded\n");
 
 	printf("Number of materials: %i\n", objData->materialCount);
@@ -192,9 +211,16 @@ void keyboardFunc(unsigned char key, int x, int y)
 	{
 	case ESC_SIGN: shutDown();
 		break;
+	case SPACE_SIGN: lightAngle += DEGREES_ACCURACY;
+		break;
+	case L_SIGN: case l_SIGN: enableLights = !enableLights; lights->turnLights(enableLights);
+		break;
+	case T_SIGN: case t_SIGN: enableTextures = !enableTextures;
+		break;
 	default: printf("key %d unknown \n", key);
 		break;
 	} // end switch
+	glutPostRedisplay();
 }
 
 void specialFunc(int key, int x, int y)
@@ -262,6 +288,7 @@ int main(int argc, char **argv)
 
 	// Creates the lights object.
 	// This will allow the application to dynamically set lights in the scene
+	enableLights = true;
 	lights = new Lights();
 
 	init();

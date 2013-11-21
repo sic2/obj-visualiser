@@ -2,12 +2,13 @@
 
 # TODO
 
-    [] Try to import .obj file (http://en.wikipedia.org/wiki/Wavefront_.obj_file)
-	[] Apply different colors to different objects
-	[] Apply shading, texture, a lighting to objects
+	[] Apply shading, and lighting to objects
 	[] Multiple viewpoints 
 	[] Animated (moving) light
-	[] Create a materials namespace
+	[] Load multiple objects
+	[] cycle lights when pressing l/L
+	[] cycle camera when pressing v/V
+	[] pick face and cycle material
 
 # Known bugs
 
@@ -20,3 +21,9 @@
 # Third party resources
 
 The makefile is a modified version of the one provided by [Michael Safyan](https://sites.google.com/site/michaelsafyan/software-engineering/how-to-write-a-makefile)
+
+Wavefront .obj loader: 
+[objLoader](http://www.kixor.net/dev/objloader/) 
+
+Image library (C/C++):
+[CImg](http://cimg.sourceforge.net/)
