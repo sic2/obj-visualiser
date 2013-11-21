@@ -1,8 +1,7 @@
 #include "Helper.h"
 #include "Lights.h"
-#include "Camera.h"
+#include "Cameras.h"
 
-#include <stdio.h>
 #include <map>
 #include <string>
 
@@ -35,6 +34,8 @@ multitexturing: http://nehe.gamedev.net/tutorial/bump-mapping,_multi-texturing_&
 #define l_SIGN 108
 #define T_SIGN 84
 #define t_SIGN 116
+#define V_SIGN 86
+#define v_SIGN 118
 
 /*
 * Perspective view coefficients
@@ -52,7 +53,7 @@ bool enableLights;
 bool animateMainLight;
 GLfloat lightAngle = 0.0f;
 
-Camera* camera;
+Cameras* cameras;
 
 const float ZOOM_FACTOR = 0.1;
 const GLfloat DEGREES_ACCURACY = 5.0f;
@@ -90,7 +91,7 @@ void display()
 	lights->reApply(lightAngle);
 	
 	glPushMatrix();
-	camera->moveTo(zoom, theta, phi);
+	cameras->moveTo(zoom, theta, phi);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// X-Y-Z Axes
@@ -224,6 +225,8 @@ void keyboardFunc(unsigned char key, int x, int y)
 		break;
 	case T_SIGN: case t_SIGN: enableTextures = !enableTextures;
 		break;
+	case V_SIGN: case v_SIGN: Camera_Location cl = cameras->nextCamera(); zoom = cl.zoom; theta = cl.theta; phi = cl.phi;
+		break;
 	default: printf("key %d unknown \n", key);
 		break;
 	} // end switch
@@ -253,12 +256,12 @@ void specialFunc(int key, int x, int y)
 // @see http://stackoverflow.com/questions/14378/using-the-mouse-scrollwheel-in-glut
 void mouse(int button, int state, int x, int y)
 {
-        if ((button == 3) || (button == 4)) // Wheel reports as button 3(scroll up) and button 4(scroll down)
-        {
-                if (state == GLUT_UP) return; // Disregard redundant GLUT_UP events
-                (button == 3) ? zoom -= ZOOM_FACTOR : zoom += ZOOM_FACTOR; // FIXME - set limits
-        }
-        glutPostRedisplay();
+	if ((button == 3) || (button == 4)) // Wheel reports as button 3(scroll up) and button 4(scroll down)
+	{
+		if (state == GLUT_UP) return; // Disregard redundant GLUT_UP events
+		(button == 3) ? zoom -= ZOOM_FACTOR : zoom += ZOOM_FACTOR; // FIXME - set limits
+	}
+	glutPostRedisplay();
 }
 
 void idleFunc()
@@ -273,7 +276,7 @@ void idleFunc()
 void cleanup()
 {
 	delete lights;
-	delete camera;
+	delete cameras;
 }
 
 /**
@@ -306,7 +309,7 @@ int main(int argc, char **argv)
 	animateMainLight = false;
 	lights = new Lights();
 
-	camera = new Camera();
+	cameras = new Cameras();
 
 	init();
 	glutMainLoop();

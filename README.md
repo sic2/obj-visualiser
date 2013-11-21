@@ -3,11 +3,9 @@
 # TODO
 
 	[] Apply shading, and lighting to objects
-	[] Multiple viewpoints 
 	[] Animated (moving) light
 	[] Load multiple objects
 	[] cycle lights when pressing l/L
-	[] cycle camera when pressing v/V
 	[] pick face and cycle material
 
 # Known bugs
