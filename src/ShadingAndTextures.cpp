@@ -15,6 +15,11 @@ NOTES:
 bump: http://www.paulsprojects.net/tutorials/simplebump/simplebump.html
 bump mapping: http://nehe.gamedev.net/article/bump_mapping/25006/
 
+multitexturing: http://nehe.gamedev.net/tutorial/bump-mapping,_multi-texturing_&_extensions/16009/
+	http://www.opengl.org/wiki/Multitexture_with_GLSL
+	http://tfpsly.free.fr/english/index.html?url=http://tfpsly.free.fr/english/3d/multitexturing.html
+	http://www.lighthouse3d.com/tutorials/glsl-tutorial/multi-texture/
+
 **/
 
 /*
@@ -44,14 +49,16 @@ objLoader *objData;
 
 Lights* lights;
 bool enableLights;
+bool animateMainLight;
+GLfloat lightAngle = 0.0f;
+
+Camera* camera;
 
 const float ZOOM_FACTOR = 0.1;
 const GLfloat DEGREES_ACCURACY = 5.0f;
 GLfloat theta = 90.0f;
 GLfloat phi = 0.0f;	
 GLfloat zoom = 3.0f;
-
-GLfloat lightAngle = 0.0f;
 
 std::map< char*, GLuint > textures;
 bool enableTextures;
@@ -64,12 +71,12 @@ void display();
 void myReshape(int w, int h);
 void keyboardFunc(unsigned char key, int x, int y);
 void specialFunc(int key, int x, int y);
-void menu(int);
+void idleFunc();
 
 // Application defined
 void cleanup();
 void shutDown();
-void init(void);
+void init();
 
 // @see http://ogldev.atspace.co.uk/www/tutorial32/tutorial32.html
 /*
@@ -83,7 +90,7 @@ void display()
 	lights->reApply(lightAngle);
 	
 	glPushMatrix();
-	Camera::moveTo(zoom, theta, phi);
+	camera->moveTo(zoom, theta, phi);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// X-Y-Z Axes
@@ -154,7 +161,7 @@ void display()
 	glutSwapBuffers();
 }
 
-void init(void)
+void init()
 {
 	/* Use depth buffering for hidden surface elimination. */
 	glEnable(GL_DEPTH_TEST);
@@ -211,7 +218,7 @@ void keyboardFunc(unsigned char key, int x, int y)
 	{
 	case ESC_SIGN: shutDown();
 		break;
-	case SPACE_SIGN: lightAngle += DEGREES_ACCURACY;
+	case SPACE_SIGN: (animateMainLight = !animateMainLight) ? glutIdleFunc(idleFunc) : glutIdleFunc(NULL);
 		break;
 	case L_SIGN: case l_SIGN: enableLights = !enableLights; lights->turnLights(enableLights);
 		break;
@@ -254,12 +261,19 @@ void mouse(int button, int state, int x, int y)
         glutPostRedisplay();
 }
 
+void idleFunc()
+{
+	lightAngle += DEGREES_ACCURACY; 
+	glutPostRedisplay();
+}
+
 /**
 * Delete any allocated resources
 */
 void cleanup()
 {
 	delete lights;
+	delete camera;
 }
 
 /**
@@ -289,7 +303,10 @@ int main(int argc, char **argv)
 	// Creates the lights object.
 	// This will allow the application to dynamically set lights in the scene
 	enableLights = true;
+	animateMainLight = false;
 	lights = new Lights();
+
+	camera = new Camera();
 
 	init();
 	glutMainLoop();

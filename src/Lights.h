@@ -40,7 +40,7 @@ public:
 	inline void reApply(float angle)
 	{
 		glPushMatrix();
-		glRotatef(angle,0,1,0);
+		glRotatef(angle, 0.0f, 1.0f, 0.0f);
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 		glPopMatrix();
 	}
