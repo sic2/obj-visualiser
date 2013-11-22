@@ -21,9 +21,14 @@ In one command:
 
 	$ make release && ./shadingAndTexture Data/cube.obj (+ or other data sets)
 
+## Examples
+	
+	$ make release && ./shadingAndTexture Data/cube1.obj Data/cube2.obj Data/cube3.obj Data/cube4.obj Data/cylinder.obj Data/globe.obj Data/wall.obj Data/wall1.obj Data/wall2.obj Data/multiTextures.obj
+
+make release && ./shadingAndTexture Data/wall.obj Data/wall1.obj Data/multiTextures.obj
+
 # TODO
 
-	[] pick face and cycle material/textures
 	[] multi-texturing
 	[] bump texturing
 

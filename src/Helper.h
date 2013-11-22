@@ -7,6 +7,7 @@
 #include <string>
 #include <cstdarg>
 #include <map>
+#include <vector>
 
 /*
 * Use singleton pattern as described in
@@ -32,17 +33,13 @@ public:
     void displayText(float x, float y, const char *fmt, ...);
 
     /**
-    * TODO
-    * @param
-    * @param
-    * @return True if texture could be loaded successfully
+    * Load an .obj file and return an object as defined by objLoader.h
+    * @param [IN] filename of texture
+    * @param [OUT] textures map used by environment
+    * @param [OUT] materials vector used by environment
+    * @return loaded object
     */
-    bool loadExternalTexture(char* texture_filename, std::map< char*, GLuint > *textures);
-
-    /**
-    * TODO
-    */
-    objLoader* getObjData(char* obj_filename, std::map< char*, GLuint > *textures);
+    objLoader* getObjData(char* obj_filename, std::map< char*, GLuint > *textures, std::vector<obj_material*> *materials);
         
 protected:
     static Helper sInstance;
@@ -53,4 +50,13 @@ private:
 
     void writeBitmapString(void *font, std::string str);
     std::string integerToString(int value);
+
+    /*
+    * Load texture from file
+    * @param [IN] filename of texture
+    * @param [OUT] textures map used by environment
+    * @return True if texture could be loaded successfully
+    */
+    bool loadExternalTexture(char* texture_filename, std::map< char*, GLuint > *textures);
+
 };

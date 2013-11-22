@@ -30,6 +30,8 @@ multitexturing: http://nehe.gamedev.net/tutorial/bump-mapping,_multi-texturing_&
 #define c_SIGN 99
 #define L_SIGN 76
 #define l_SIGN 108
+#define M_SIGN 77
+#define m_SIGN 109
 #define T_SIGN 84
 #define t_SIGN 116
 #define V_SIGN 86
@@ -46,11 +48,11 @@ multitexturing: http://nehe.gamedev.net/tutorial/bump-mapping,_multi-texturing_&
 /*
 * Perspective view coefficients
 */
-#define PERSPECTIVE_ANGLE_VIEW 60.0
+#define PERSPECTIVE_ANGLE_VIEW 90.0
 #define PERSPECTIVE_NEAR 1.0
-#define PERSPECTIVE_FAR 40.0
+#define PERSPECTIVE_FAR 80.0
 
-#define FPS_CONST 30.0
+#define PERIOD_CONST 30.0 // In milliseconds
 
 int width = 500; int height = 500;
 const float ZOOM_FACTOR = 0.1;
@@ -58,9 +60,6 @@ const GLfloat DEGREES_ACCURACY = 5.0f;
 GLfloat theta = 90.0f;
 GLfloat phi = 0.0f;	
 GLfloat zoom = 3.0f;
-
-// Picking
-unsigned int pickBuffer[PICK_BUFFER_SIZE];
 
 // Pointers flags
 bool lightsCreated = false;
@@ -71,7 +70,7 @@ bool objsDataCreated = false;
 Lights* lights;
 bool animateMainLight;
 GLfloat lightAngle = 0.0f;
-unsigned int FPS;
+unsigned int PERIOD;
 // Cameras
 Cameras* cameras;
 // Loaded Objects
@@ -79,11 +78,17 @@ std::vector<objLoader*> objsData;
 // Textures
 std::map< char*, GLuint >* textures;
 bool enableTextures;
+// Materials
+std::vector<obj_material*>* materials;
+unsigned int currentMaterialToAssign = 0;
 
+// Picking
+unsigned int pickBuffer[PICK_BUFFER_SIZE];
 // Id-objects mapping (needed for picking) 
 // id -> (face_ID, object)
 std::map< int, std::pair<int, objLoader*> > mapFaceToObject;
 unsigned int nextId = 0;
+int lastPicked = -1;
 
 /*
 * Preprocessors
@@ -93,7 +98,7 @@ void display();
 void myReshape(int w, int h);
 void keyboardFunc(unsigned char key, int x, int y);
 void specialFunc(int key, int x, int y);
-void Timer(int value);
+void timer(int value);
 
 // Application defined
 void cleanup();
@@ -101,6 +106,7 @@ void shutDown(bool success);
 void loadObjects(int argc, char** argv);
 void processPicks(GLint hits, GLuint buffer[], int x, int y);
 void picking(int x, int y);
+void cycleTextAndMats();
 
 /**
 * Display all objects in the scene.
@@ -119,7 +125,6 @@ void display()
 	for(std::vector< objLoader* >::iterator iter = objsData.begin();
 			iter != objsData.end(); ++iter)
 	{
-		printf("facecount is %d\n", (*iter)->faceCount);
 		for(int i = 0; i < (*iter)->faceCount; ++i)
 		{
 			obj_face *o = (*iter)->faceList[i];
@@ -163,7 +168,7 @@ void display()
 				if (o->texture_index[j] != -1 && enableTextures)
 					// Flip along y-direction, to compensate CImg behaviour
 					glTexCoord2f((*iter)->textureList[ o->texture_index[j] ]->e[0],
-								 1 - (*iter)->textureList[ o->texture_index[j] ]->e[1]);
+								1 - (*iter)->textureList[ o->texture_index[j] ]->e[1]);
 				
 				obj_vector *vertexList = (*iter)->vertexList[ o->vertex_index[ j ] ];
 				glVertex3f(vertexList->e[0], 
@@ -197,9 +202,10 @@ void loadObjects(int argc, char** argv)
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); // GL_MODULATE allows color and light to be combined with textures.
 	
 	textures = new std::map< char*, GLuint >();
+	materials = new std::vector<obj_material*>();
 	for(int i = 1; i < argc; i++)
 	{
-		objsData.push_back(Helper::instance().getObjData(argv[i], textures));
+		objsData.push_back(Helper::instance().getObjData(argv[i], textures, materials));
 	}
 	objsDataCreated = true;
 }
@@ -220,13 +226,13 @@ void myReshape(int w, int h)
 	glLoadIdentity();
 }
 
-void Timer(int value) 
+void timer(int value) 
 {
-	if (FPS > 0.0)
+	if (PERIOD > 0.0f)
 	{
 		lightAngle += DEGREES_ACCURACY; 
 		glutPostRedisplay();     
-		glutTimerFunc(FPS, Timer, 0);
+		glutTimerFunc(PERIOD, timer, 0);
 	}
 }
 
@@ -239,15 +245,17 @@ void keyboardFunc(unsigned char key, int x, int y)
 	case SPACE_SIGN: 
 		if(animateMainLight = !animateMainLight) 
 		{
-			FPS = FPS_CONST;
-			glutTimerFunc(0, Timer, 1);
+			PERIOD = PERIOD_CONST;
+			glutTimerFunc(0, timer, 1);
 		}
 		else 
 		{
-			FPS = 0.0f;
+			PERIOD = 0.0f;
 		}
 		break;
 	case L_SIGN: case l_SIGN: lights->nextLights();
+		break;
+	case M_SIGN: case m_SIGN: cycleTextAndMats();
 		break;
 	case T_SIGN: case t_SIGN: enableTextures = !enableTextures;
 		break;
@@ -294,25 +302,35 @@ void mouse(int button, int state, int x, int y)
 	glutPostRedisplay();
 }
 
+/*
+* Cycles materials and textures
+*/
+void cycleTextAndMats()
+{
+	if (lastPicked != -1)
+	{
+		int faceId = mapFaceToObject[lastPicked].first;
+		objLoader* obj = mapFaceToObject[lastPicked].second;
+		currentMaterialToAssign++;
+		currentMaterialToAssign = (currentMaterialToAssign) % materials->size();
+		obj->materialList[ (obj->faceList[faceId])->material_index ] = (*materials)[currentMaterialToAssign];
+	}
+}
+
 /*  
- * Note: this is the exact same method used in practical 2.
- *
- * Note: This method would not work for heights < 0,
- * 		unless index is changed to GLint*
+ * Note: this method is very similar to the one used in practical 2.
  */
 void processPicks(GLint hits, GLuint buffer[], int x, int y)
 {
-	GLuint* index = (GLuint *)buffer;
-	unsigned int maxHeightHit = 0;
+	GLint* index = (GLint *)buffer;
+	int maxHeightHit = 0;
 	for (unsigned int i = 0; i < (unsigned int) hits && hits > (int) NO_HITS ; ++i)
 	{
 		index += (int) HITS_OFFSET; // skip zmin and zmax
 		if (*index > maxHeightHit) maxHeightHit = *index;
-		printf("hit at %d \n", *index);
-		index++; // next hit 
+		index++;
 	}
-	 if (hits > (int) NO_HITS) 
-	 	printf("picked face %d\n", mapFaceToObject[maxHeightHit].first);
+	if (hits > (int) NO_HITS) lastPicked = maxHeightHit;
 }
 
 /*
@@ -325,23 +343,19 @@ void picking(int x, int y)
 
 	glSelectBuffer(PICK_BUFFER_SIZE, pickBuffer);
 	glRenderMode(GL_SELECT);
-
 	glInitNames();
 
 	glMatrixMode(GL_PROJECTION);
 	glPushMatrix();
 	glLoadIdentity();
-
 	gluPickMatrix((GLdouble) x, (GLdouble) (viewport[3] - y), PICK_TOLLERANCE, PICK_TOLLERANCE, viewport);
 	gluPerspective(PERSPECTIVE_ANGLE_VIEW, width/height, PERSPECTIVE_NEAR, PERSPECTIVE_FAR);
 	display();
-
 	glMatrixMode(GL_PROJECTION);
 	glPopMatrix();
 	glFlush();
 
 	processPicks(glRenderMode(GL_RENDER), pickBuffer, x, y);
-
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -358,12 +372,8 @@ void cleanup()
 		delete cameras;
 	if (objsDataCreated)
 	{
-		for(std::vector< objLoader* >::iterator iter = objsData.begin();
-			iter != objsData.end(); ++iter)
-		{
-			delete (*iter);
-		}
 		delete textures;
+		delete materials;
 	}
 }
 
