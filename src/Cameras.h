@@ -92,7 +92,6 @@ private:
 			printf("Undefined camera picked \n");
 		break;
 		}
-		printf("camera %d\n", _index);
 		return cl;
 	}
 };

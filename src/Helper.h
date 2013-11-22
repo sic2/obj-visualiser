@@ -2,17 +2,11 @@
 
 #include "OpenGLHeaders.h"
 
+#include "objLoader.h"
+
 #include <string>
 #include <cstdarg>
 #include <map>
-
-// Struct of bitmap file.
-struct BitMapFile
-{
-   int sizeX;
-   int sizeY;
-   unsigned char *data;
-};
 
 /*
 * Use singleton pattern as described in
@@ -41,9 +35,14 @@ public:
     * TODO
     * @param
     * @param
-    * @return True if texture could be loaded succesfully
+    * @return True if texture could be loaded successfully
     */
-    bool loadExternalTexture(char* texture_filename, std::map< char*, GLuint > textures);
+    bool loadExternalTexture(char* texture_filename, std::map< char*, GLuint > *textures);
+
+    /**
+    * TODO
+    */
+    objLoader* getObjData(char* obj_filename, std::map< char*, GLuint > *textures);
         
 protected:
     static Helper sInstance;

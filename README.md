@@ -2,11 +2,9 @@
 
 # TODO
 
-	[] Apply shading, and lighting to objects
-	[] Animated (moving) light
-	[] Load multiple objects
-	[] cycle lights when pressing l/L
-	[] pick face and cycle material
+	[] pick face and cycle material/textures
+	[] multi-texturing
+	[] bump texturing
 
 # Known bugs
 
