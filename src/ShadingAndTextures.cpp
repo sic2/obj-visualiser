@@ -50,6 +50,8 @@ multitexturing: http://nehe.gamedev.net/tutorial/bump-mapping,_multi-texturing_&
 #define PERSPECTIVE_NEAR 1.0
 #define PERSPECTIVE_FAR 40.0
 
+#define FPS_CONST 30.0
+
 int width = 500; int height = 500;
 const float ZOOM_FACTOR = 0.1;
 const GLfloat DEGREES_ACCURACY = 5.0f;
@@ -65,16 +67,23 @@ bool lightsCreated = false;
 bool camerasCreated = false;
 bool objsDataCreated = false;
 
+// Lights and animation
 Lights* lights;
 bool animateMainLight;
 GLfloat lightAngle = 0.0f;
-
+unsigned int FPS;
+// Cameras
 Cameras* cameras;
-
+// Loaded Objects
 std::vector<objLoader*> objsData;
-
+// Textures
 std::map< char*, GLuint >* textures;
 bool enableTextures;
+
+// Id-objects mapping (needed for picking) 
+// id -> (face_ID, object)
+std::map< int, std::pair<int, objLoader*> > mapFaceToObject;
+unsigned int nextId = 0;
 
 /*
 * Preprocessors
@@ -84,7 +93,7 @@ void display();
 void myReshape(int w, int h);
 void keyboardFunc(unsigned char key, int x, int y);
 void specialFunc(int key, int x, int y);
-void idleFunc();
+void Timer(int value);
 
 // Application defined
 void cleanup();
@@ -94,7 +103,10 @@ void processPicks(GLint hits, GLuint buffer[], int x, int y);
 void picking(int x, int y);
 
 /**
-* TODO - docs
+* Display all objects in the scene.
+* iterate over each object and apply appropriate material/texture
+*
+* At each frame lights and cameras are updated, if necessary
 */
 void display()
 {
@@ -107,11 +119,11 @@ void display()
 	for(std::vector< objLoader* >::iterator iter = objsData.begin();
 			iter != objsData.end(); ++iter)
 	{
+		printf("facecount is %d\n", (*iter)->faceCount);
 		for(int i = 0; i < (*iter)->faceCount; ++i)
 		{
 			obj_face *o = (*iter)->faceList[i];
 
-			// Material properties
 			obj_material *mtl = (*iter)->materialList[ o->material_index ];
 			float mat_ambient[] 	= {mtl->amb[0], mtl->amb[1], mtl->amb[2], 1.0};
 			float mat_specular[] 	= {mtl->spec[0], mtl->spec[1], mtl->spec[2], 1.0};
@@ -132,16 +144,23 @@ void display()
 				glDisable(GL_TEXTURE_2D);
 			}
 
+			glPushName(nextId);
+			mapFaceToObject.insert(std::make_pair(nextId, std::make_pair(i, (*iter))));
+			nextId++;
 			glBegin(GL_TRIANGLE_FAN); // NOTE: Assume faces are triangulated
 			for(int j = 0; j < o->vertex_count; ++j)
 			{
-				// Normal vector
+				if (o->normal_index[ j ] == -1)
+				{
+					printf("Normal vector/s missing\n");
+					shutDown(false);
+				}
 				obj_vector *normalList = (*iter)->normalList[ o->normal_index[ j ] ];
 				glNormal3f(normalList->e[0], 
 						normalList->e[1], 
 						normalList->e[2]); 
 
-				if (o->texture_index[j] != -1)
+				if (o->texture_index[j] != -1 && enableTextures)
 					// Flip along y-direction, to compensate CImg behaviour
 					glTexCoord2f((*iter)->textureList[ o->texture_index[j] ]->e[0],
 								 1 - (*iter)->textureList[ o->texture_index[j] ]->e[1]);
@@ -152,6 +171,8 @@ void display()
 						vertexList->e[2]);
 			}		
 			glEnd();
+
+			glPopName();
 		}
 	}
 	glPopMatrix();
@@ -159,7 +180,9 @@ void display()
 }
 
 /** 
-* TODO - docs
+* Loads any object specified by the user
+* @param char* argv[] is the array of object (string) to load
+* if not object filename is passed, then the program shuts down
 */ 
 void loadObjects(int argc, char** argv)
 {
@@ -197,13 +220,32 @@ void myReshape(int w, int h)
 	glLoadIdentity();
 }
 
+void Timer(int value) 
+{
+	if (FPS > 0.0)
+	{
+		lightAngle += DEGREES_ACCURACY; 
+		glutPostRedisplay();     
+		glutTimerFunc(FPS, Timer, 0);
+	}
+}
+
 void keyboardFunc(unsigned char key, int x, int y)
 {
 	switch(key)
 	{
 	case ESC_SIGN: shutDown(true);
 		break;
-	case SPACE_SIGN: (animateMainLight = !animateMainLight) ? glutIdleFunc(idleFunc) : glutIdleFunc(NULL);
+	case SPACE_SIGN: 
+		if(animateMainLight = !animateMainLight) 
+		{
+			FPS = FPS_CONST;
+			glutTimerFunc(0, Timer, 1);
+		}
+		else 
+		{
+			FPS = 0.0f;
+		}
 		break;
 	case L_SIGN: case l_SIGN: lights->nextLights();
 		break;
@@ -247,7 +289,7 @@ void mouse(int button, int state, int x, int y)
 	else if ((button == 3) || (button == 4)) // Wheel reports as button 3(scroll up) and button 4(scroll down)
 	{
 		if (state == GLUT_UP) return; // Disregard redundant GLUT_UP events
-		(button == 3) ? zoom -= ZOOM_FACTOR : zoom += ZOOM_FACTOR; // FIXME - set limits
+		(button == 3) ? zoom -= ZOOM_FACTOR : zoom += ZOOM_FACTOR;
 	}
 	glutPostRedisplay();
 }
@@ -266,11 +308,11 @@ void processPicks(GLint hits, GLuint buffer[], int x, int y)
 	{
 		index += (int) HITS_OFFSET; // skip zmin and zmax
 		if (*index > maxHeightHit) maxHeightHit = *index;
+		printf("hit at %d \n", *index);
 		index++; // next hit 
 	}
-	if (hits > (int) NO_HITS) 
-		//contours->updatePickedContour(maxHeightHit);
-		printf("hello\n");
+	 if (hits > (int) NO_HITS) 
+	 	printf("picked face %d\n", mapFaceToObject[maxHeightHit].first);
 }
 
 /*
@@ -299,12 +341,10 @@ void picking(int x, int y)
 	glFlush();
 
 	processPicks(glRenderMode(GL_RENDER), pickBuffer, x, y);
-}
 
-void idleFunc()
-{
-	lightAngle += DEGREES_ACCURACY; 
-	glutPostRedisplay();
+
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
 }
 
 /**

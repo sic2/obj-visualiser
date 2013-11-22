@@ -1,5 +1,6 @@
 # Shading And Texture
 
+	DESCRIPTION
 ======================================
 
 # How to compile and run the program:
@@ -28,11 +29,11 @@ In one command:
 
 # Known bugs
 
-	[] NONE
+	[] Zoom limits not set
 
 # Demo
 
-	http://youtu.be/FYMh4WhZvuE 
+	LINK
 
 
 # Requirements
