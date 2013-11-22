@@ -36,6 +36,14 @@ multitexturing: http://nehe.gamedev.net/tutorial/bump-mapping,_multi-texturing_&
 #define v_SIGN 118
 
 /*
+* Picking constants
+*/
+#define PICK_TOLLERANCE 5
+#define PICK_BUFFER_SIZE 128
+#define NO_HITS 0
+#define HITS_OFFSET 3
+
+/*
 * Perspective view coefficients
 */
 #define PERSPECTIVE_ANGLE_VIEW 60.0
@@ -48,6 +56,9 @@ const GLfloat DEGREES_ACCURACY = 5.0f;
 GLfloat theta = 90.0f;
 GLfloat phi = 0.0f;	
 GLfloat zoom = 3.0f;
+
+// Picking
+unsigned int pickBuffer[PICK_BUFFER_SIZE];
 
 // Pointers flags
 bool lightsCreated = false;
@@ -79,6 +90,8 @@ void idleFunc();
 void cleanup();
 void shutDown(bool success);
 void loadObjects(int argc, char** argv);
+void processPicks(GLint hits, GLuint buffer[], int x, int y);
+void picking(int x, int y);
 
 /**
 * TODO - docs
@@ -94,49 +107,49 @@ void display()
 	for(std::vector< objLoader* >::iterator iter = objsData.begin();
 			iter != objsData.end(); ++iter)
 	{
-		objLoader* objData = *iter;
-		// FIXME - needed for myface.obj
-		// glScalef(0.5, 0.5, 0.5);
-		// glTranslatef(0.0, -3.0, 0.0);
-		for(int i=0; i < objData->faceCount; i++)
+		for(int i = 0; i < (*iter)->faceCount; ++i)
 		{
-			obj_face *o = objData->faceList[i];
-			for(int j=0; j < o->vertex_count; j++)
+			obj_face *o = (*iter)->faceList[i];
+
+			// Material properties
+			obj_material *mtl = (*iter)->materialList[ o->material_index ];
+			float mat_ambient[] 	= {mtl->amb[0], mtl->amb[1], mtl->amb[2], 1.0};
+			float mat_specular[] 	= {mtl->spec[0], mtl->spec[1], mtl->spec[2], 1.0};
+			float mat_diffuse[] 	= {mtl->diff[0], mtl->diff[1], mtl->diff[2], 1.0};
+			float shininess = mtl->shiny;
+			glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
+			glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+			glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+			glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+
+			if (enableTextures)
+			{	
+				glEnable(GL_TEXTURE_2D);
+				glBindTexture(GL_TEXTURE_2D, (*textures)[mtl->diff_texture_filename]);
+			}
+			else
 			{
-				// Normals
-				glNormal3f(objData->normalList[ o->normal_index[ j ] ]->e[0], 
-						objData->normalList[ o->normal_index[ j ] ]->e[1], 
-						objData->normalList[ o->normal_index[ j ] ]->e[2]); 
+				glDisable(GL_TEXTURE_2D);
+			}
 
-				// Materials
-				obj_material *mtl = objData->materialList[ o->material_index ];
-				float mat_ambient[] 	= {mtl->amb[0], mtl->amb[1], mtl->amb[2], 1.0};
-				float mat_specular[] 	= {mtl->spec[0], mtl->spec[1], mtl->spec[2], 1.0};
-				float mat_diffuse[] 	= {mtl->diff[0], mtl->diff[1], mtl->diff[2], 1.0};
-				float shininess = mtl->shiny;
-				glMaterialfv(GL_FRONT, GL_AMBIENT, mat_ambient);
-				glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-				glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-				glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+			glBegin(GL_TRIANGLE_FAN); // NOTE: Assume faces are triangulated
+			for(int j = 0; j < o->vertex_count; ++j)
+			{
+				// Normal vector
+				obj_vector *normalList = (*iter)->normalList[ o->normal_index[ j ] ];
+				glNormal3f(normalList->e[0], 
+						normalList->e[1], 
+						normalList->e[2]); 
 
-				if (enableTextures)
-				{	
-					glEnable(GL_TEXTURE_2D);
-					glBindTexture(GL_TEXTURE_2D, (*textures)[mtl->diff_texture_filename]);
-					if (o->texture_index[j] != -1)
-						// Flip along y-direction, to compensate CImg behaviour
-						glTexCoord2f(objData->textureList[ o->texture_index[j] ]->e[0],
-									 1 - objData->textureList[ o->texture_index[j] ]->e[1]);
-				}
-				else
-				{
-					glDisable(GL_TEXTURE_2D);
-				}
-
-				glBegin(GL_TRIANGLE_FAN); // NOTE: Assume faces are triangulated
-				glVertex3f(objData->vertexList[ o->vertex_index[j] ]->e[0], 
-						objData->vertexList[ o->vertex_index[j] ]->e[1], 
-						objData->vertexList[ o->vertex_index[j] ]->e[2]);
+				if (o->texture_index[j] != -1)
+					// Flip along y-direction, to compensate CImg behaviour
+					glTexCoord2f((*iter)->textureList[ o->texture_index[j] ]->e[0],
+								 1 - (*iter)->textureList[ o->texture_index[j] ]->e[1]);
+				
+				obj_vector *vertexList = (*iter)->vertexList[ o->vertex_index[ j ] ];
+				glVertex3f(vertexList->e[0], 
+						vertexList->e[1], 
+						vertexList->e[2]);
 			}		
 			glEnd();
 		}
@@ -159,7 +172,7 @@ void loadObjects(int argc, char** argv)
 	enableTextures = true;
 	glEnable(GL_TEXTURE_2D);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE); // GL_MODULATE allows color and light to be combined with textures.
-
+	
 	textures = new std::map< char*, GLuint >();
 	for(int i = 1; i < argc; i++)
 	{
@@ -196,7 +209,7 @@ void keyboardFunc(unsigned char key, int x, int y)
 		break;
 	case T_SIGN: case t_SIGN: enableTextures = !enableTextures;
 		break;
-	case V_SIGN: case v_SIGN: Camera_Location cl = cameras->nextCamera(); zoom = cl.zoom; theta = cl.theta; phi = cl.phi;
+	case V_SIGN: case v_SIGN: {Camera_Location cl = cameras->nextCamera(); zoom = cl.zoom; theta = cl.theta; phi = cl.phi;}
 		break;
 	default: printf("key %d unknown \n", key);
 		break;
@@ -227,12 +240,65 @@ void specialFunc(int key, int x, int y)
 // @see http://stackoverflow.com/questions/14378/using-the-mouse-scrollwheel-in-glut
 void mouse(int button, int state, int x, int y)
 {
-	if ((button == 3) || (button == 4)) // Wheel reports as button 3(scroll up) and button 4(scroll down)
+	if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN)
+	{	
+		picking(x, y);
+	}
+	else if ((button == 3) || (button == 4)) // Wheel reports as button 3(scroll up) and button 4(scroll down)
 	{
 		if (state == GLUT_UP) return; // Disregard redundant GLUT_UP events
 		(button == 3) ? zoom -= ZOOM_FACTOR : zoom += ZOOM_FACTOR; // FIXME - set limits
 	}
 	glutPostRedisplay();
+}
+
+/*  
+ * Note: this is the exact same method used in practical 2.
+ *
+ * Note: This method would not work for heights < 0,
+ * 		unless index is changed to GLint*
+ */
+void processPicks(GLint hits, GLuint buffer[], int x, int y)
+{
+	GLuint* index = (GLuint *)buffer;
+	unsigned int maxHeightHit = 0;
+	for (unsigned int i = 0; i < (unsigned int) hits && hits > (int) NO_HITS ; ++i)
+	{
+		index += (int) HITS_OFFSET; // skip zmin and zmax
+		if (*index > maxHeightHit) maxHeightHit = *index;
+		index++; // next hit 
+	}
+	if (hits > (int) NO_HITS) 
+		//contours->updatePickedContour(maxHeightHit);
+		printf("hello\n");
+}
+
+/*
+* Note: this is the exact same method used in practical 2.
+*/
+void picking(int x, int y)
+{
+	GLint viewport[4];
+	glGetIntegerv(GL_VIEWPORT, viewport);
+
+	glSelectBuffer(PICK_BUFFER_SIZE, pickBuffer);
+	glRenderMode(GL_SELECT);
+
+	glInitNames();
+
+	glMatrixMode(GL_PROJECTION);
+	glPushMatrix();
+	glLoadIdentity();
+
+	gluPickMatrix((GLdouble) x, (GLdouble) (viewport[3] - y), PICK_TOLLERANCE, PICK_TOLLERANCE, viewport);
+	gluPerspective(PERSPECTIVE_ANGLE_VIEW, width/height, PERSPECTIVE_NEAR, PERSPECTIVE_FAR);
+	display();
+
+	glMatrixMode(GL_PROJECTION);
+	glPopMatrix();
+	glFlush();
+
+	processPicks(glRenderMode(GL_RENDER), pickBuffer, x, y);
 }
 
 void idleFunc()

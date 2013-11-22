@@ -2,6 +2,8 @@
 
 #include "OpenGLHeaders.h"
 
+#include <stdio.h>
+
 #define NUMBER_LIGHTS 6
 
 /*
