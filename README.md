@@ -25,21 +25,21 @@ In one command:
 	
 	$ make release && ./shadingAndTexture Data/cube1.obj Data/cube2.obj Data/cube3.obj Data/cube4.obj Data/cylinder.obj Data/globe.obj Data/wall.obj Data/wall1.obj Data/wall2.obj Data/multiTextures.obj
 
-make release && ./shadingAndTexture Data/wall.obj Data/wall1.obj Data/multiTextures.obj
+
+	$ make release && ./shadingAndTexture Data/multiTextures.obj
+
+
+	$ make release && ./shadingAndTexture Data/multiTextures.obj
 
 # TODO
 
 	[] multi-texturing
 	[] bump texturing
+	[] improve face picking
 
 # Known bugs
 
 	[] Zoom limits not set
-
-# Demo
-
-	LINK
-
 
 # Requirements
 
@@ -59,3 +59,5 @@ Wavefront .obj loader (slightly modified version):
 
 Image library (C/C++):
 [CImg](http://cimg.sourceforge.net/)
+
+Images were all downloaded from internet. See appropriate text file in Data/ for specific links.

@@ -17,7 +17,7 @@
 #define STD_ZOOM 4
 
 /**
-*
+* Define a camera location in a sphere
 */
 typedef struct Camera_Location
 {
@@ -38,6 +38,12 @@ public:
 
 	virtual ~Cameras() {}
 
+	/**
+	* move the camera to a given location, specified by:
+	* @param zoom
+	* @param theta (in degrees)
+	* @param phi (in degrees)
+	*/
 	inline void moveTo(float zoom, float theta, float phi)
 	{
 		// @see http://homepages.ius.edu/RWISMAN/b481/html/notes/FlyAround.htm
@@ -59,6 +65,9 @@ public:
 			  	upX, upY, upZ);   // Up vector
 	}
 
+	/**
+	* @return the next predefined camera location
+	*/
 	inline Camera_Location nextCamera()
 	{
 		_index++;

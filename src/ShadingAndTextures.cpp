@@ -6,19 +6,6 @@
 #include <vector>
 #include <string>
 
-/**
-
-NOTES:
-bump: http://www.paulsprojects.net/tutorials/simplebump/simplebump.html
-bump mapping: http://nehe.gamedev.net/article/bump_mapping/25006/
-
-multitexturing: http://nehe.gamedev.net/tutorial/bump-mapping,_multi-texturing_&_extensions/16009/
-	http://www.opengl.org/wiki/Multitexture_with_GLSL
-	http://tfpsly.free.fr/english/index.html?url=http://tfpsly.free.fr/english/3d/multitexturing.html
-	http://www.lighthouse3d.com/tutorials/glsl-tutorial/multi-texture/
-
-**/
-
 /*
 * Key bindings
 */

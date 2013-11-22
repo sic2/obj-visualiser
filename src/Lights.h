@@ -56,10 +56,15 @@ public:
 		glPushMatrix();
 		glRotatef(angle, 0.0f, 1.0f, 0.0f);
 		glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+		glPopMatrix();
 
 		if (_index == 5)
+		{
+			glPushMatrix();
+			glRotatef(angle, 1.0f, 0.0f, 0.0f);
 			glLightfv(GL_LIGHT1, GL_POSITION, light_position1);
-		glPopMatrix();
+			glPopMatrix();
+		}
 	}
 
 	/**
